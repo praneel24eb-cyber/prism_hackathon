@@ -1,4 +1,4 @@
-# 🛡️ CodeGuardian — Autonomous PR Review Agent
+# 🛡️ ClawSight — Autonomous PR Review Agent
 
 > **OpenClaw Hackathon | Theme 3: Productivity Platforms**
 > *"What tools can you create to make AI your best colleague?"*
