@@ -1,101 +1,91 @@
-# 🛡️ CodeGuardian — Autonomous PR Review Agent
+# 🛡️ Claw-Sight — Autonomous PR Review Agent
 
-> **Context-Aware, Always-On, Learning**  
-> Built on OpenClaw | Theme 3: Productivity Platforms — *"What tools can you create to make AI your best colleague?"*
-
-CodeGuardian is an autonomous AI agent that reviews every pull request with full codebase awareness. It runs **4 specialist agents in parallel** (Security, Performance, Test Coverage, Architecture), assigns severity levels, calculates a **Regression Risk Score**, and learns your team's conventions over time.
+> **OpenClaw Hackathon | Theme 3: Productivity Platforms**
+> *"What tools can you create to make AI your best colleague?"*
 
 ---
 
-## 🏗️ Architecture — 6-Layer Design
+## 🚨 Problem
 
-```
-Layer 1: Input              → GitHub Webhook · PR Event Trigger
-Layer 2: Context Retrieval  → PR Diff + File Metadata · Semantic Search
-Layer 3: Multi-Agent (‖)    → Security | Performance | Test Coverage | Architecture
-Layer 4: Reasoning & Triage → Severity Classifier · Risk Scorer · Deduplication
-Layer 5: Action & Notify    → GitHub Review Poster · Request Changes / Approve
-Layer 6: Memory & Learning  → Review History · Author Profiles · False Positive Log
-```
+Modern engineering teams face a critical bottleneck in the code review process:
 
-**Data flow:** GitHub webhook → Fetch diff → 4 parallel agents → Severity triage → Risk score → GitHub review + notifications → Memory persistence
+- **Reviews are slow** — developers wait hours or days for feedback, blocking delivery
+- **Reviews are inconsistent** — quality depends on the reviewer's mood, expertise, and availability
+- **Security gaps go unnoticed** — reviewers miss injection flaws, hardcoded secrets, and auth bypasses under time pressure
+- **Context is lost** — reviewers have no memory of past patterns, repeat mistakes, or known false positives
+- **Test coverage is ignored** — new features ship without tests because nobody explicitly checks
+- **On-call fatigue** — senior engineers are pulled into every PR, burning out the people who can least afford to be interrupted
+
+> The result: bugs reach production that a thorough, consistent reviewer would have caught.
 
 ---
 
-## ✨ Key Features
+## 💡 Solution
+
+**CodeGuardian** is an autonomous AI-powered PR review agent that acts as an always-on senior engineer on your team.
+
+It connects to your GitHub repository via webhook. Every time a pull request is opened or updated, CodeGuardian:
+
+1. **Fetches the diff** from GitHub
+2. **Runs 4 specialist AI agents in parallel**, each focused on a different risk dimension:
+   - 🔒 **Security Agent** — SQL injection, XSS, hardcoded secrets, auth flaws
+   - ⚡ **Performance Agent** — N+1 queries, blocking async calls, memory leaks
+   - 🧪 **Test Coverage Agent** — Missing tests, untested edge cases, meaningless assertions
+   - 🏗️ **Architecture Agent** — SOLID violations, tight coupling, code duplication
+3. **Calculates a regression risk score** (1–10) based on issue severity, diff size, and file spread
+4. **Posts a structured review** back to the PR with severity badges, evidence, and suggested fixes
+5. **Persists review history** to learn from past patterns and suppress known false positives
+
+### Key Features
 
 | Feature | Description |
-|---------|-------------|
-| **4 Parallel Agents** | Security, Performance, Test Coverage, and Architecture specialists run concurrently |
-| **Severity Triage** | Issues classified as 🔴 BLOCKER / 🟡 WARNING / 🔵 SUGGESTION |
-| **Regression Risk Score** | 1–10 score based on diff size, file spread, test coverage, and blocker count |
-| **Structured Reviews** | Professional GitHub PR reviews with evidence, explanation, and suggested fixes |
-| **Smart Actions** | Auto-requests changes for blockers, comments for warnings, approves clean PRs |
-| **Memory & Learning** | Tracks review history, builds author profiles, suppresses false positives |
-| **Heartbeat Daemon** | Background monitor flags stale PRs (>24h without review) |
-| **Dashboard** | Real-time web dashboard with review statistics and history |
-| **Dual LLM Support** | Supports both OpenAI and Anthropic as backends |
+|--------|-------------|
+| 4 Parallel Agents | Security, Performance, Test Coverage, Architecture run simultaneously |
+| Groq-powered (Free) | Uses Llama 3 70B via Groq's free API — no OpenAI cost |
+| Risk Score Engine | 1–10 regression risk score with contributing factors |
+| Memory & Learning | Tracks author patterns, suppresses repeated false positives |
+| GitHub Native | Posts reviews directly as PR comments with APPROVE/REQUEST_CHANGES |
+| Webhook Verified | HMAC-SHA256 signature verification on all incoming events |
+| Live Dashboard | Web UI showing total reviews, issues found, risk trends |
+| Test Endpoint | Demo mode — submit any diff without needing GitHub |
 
 ---
 
-## 🚀 Quick Start
+## 🏗️ Architecture
 
-### Prerequisites
-
-- Python 3.10+
-- GitHub account with a personal access token
-- OpenAI or Anthropic API key
-
-### 1. Clone & Install
-
-```bash
-git clone https://github.com/your-org/codeguardian.git
-cd codeguardian
-pip install -r requirements.txt
 ```
-
-### 2. Configure Environment
-
-Copy `.env` and fill in your keys:
-
-```bash
-# .env
-LLM_PROVIDER=openai
-OPENAI_API_KEY=sk-your-key-here
-GITHUB_TOKEN=ghp_your-token-here
-GITHUB_WEBHOOK_SECRET=your-secret-here
-```
-
-### 3. Run the Server
-
-```bash
-python run.py
-```
-
-Server starts at `http://localhost:8000`:
-- **Webhook endpoint:** `POST /webhook`
-- **Dashboard:** `GET /dashboard`
-- **Health check:** `GET /health`
-- **Test endpoint:** `POST /test-review`
-
-### 4. Set Up GitHub Webhook
-
-1. Go to your repo → Settings → Webhooks → Add webhook
-2. **Payload URL:** `https://your-server.com/webhook` (use ngrok for local testing)
-3. **Content type:** `application/json`
-4. **Secret:** Same as `GITHUB_WEBHOOK_SECRET` in `.env`
-5. **Events:** Select "Pull requests"
-
-### 5. Test It
-
-Open a pull request — CodeGuardian will automatically post a structured review within seconds.
-
-Or test directly:
-
-```bash
-curl -X POST http://localhost:8000/test-review \
-  -H "Content-Type: application/json" \
-  -d '{"diff": "--- a/app.py\n+++ b/app.py\n@@ -1,3 +1,5 @@\n+import os\n+password = \"admin123\"\n db_url = os.getenv(\"DB\")", "repo": "test/repo", "pr_number": 1}'
+GitHub PR Event
+      │
+      ▼
+┌─────────────────┐
+│  Webhook Handler │  ← Signature verification (HMAC-SHA256)
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│   Diff Fetcher   │  ← GitHub API (unified diff)
+└────────┬────────┘
+         │
+         ▼
+┌────────────────────────────────────────────┐
+│              4 Parallel Agents             │
+│  🔒 Security  ⚡ Perf  🧪 Tests  🏗️ Arch  │  ← asyncio.gather()
+└────────────────────────┬───────────────────┘
+                         │
+                         ▼
+              ┌─────────────────┐
+              │  Risk Scorer    │  ← Score 1–10
+              └────────┬────────┘
+                       │
+                       ▼
+              ┌─────────────────┐
+              │  Review Poster  │  ← GitHub PR Review API
+              └────────┬────────┘
+                       │
+                       ▼
+              ┌─────────────────┐
+              │  Memory Layer   │  ← JSON persistence + author profiles
+              └─────────────────┘
 ```
 
 ---
@@ -103,132 +93,209 @@ curl -X POST http://localhost:8000/test-review \
 ## 📁 Project Structure
 
 ```
-codeguardian/
-├── run.py                  # Entry point — starts the server
+prism_hackathon/
+├── run.py                  # Entry point — starts the FastAPI server
 ├── requirements.txt        # Python dependencies
-├── .env                    # Environment configuration
+├── .env                    # Configuration (API keys, tokens)
+├── test_review.py          # Quick test — submit a diff without GitHub
 │
-├── server/                 # Core application
-│   ├── __init__.py
-│   ├── app.py              # FastAPI routes, webhook handler, dashboard
-│   ├── agent.py            # 4 specialist agents (parallel execution)
+├── server/
+│   ├── app.py              # FastAPI app (webhook, dashboard, test endpoint)
+│   ├── agent.py            # Multi-agent review engine (4 parallel agents)
 │   ├── github.py           # GitHub API integration
 │   ├── models.py           # Pydantic data models
-│   ├── utils.py            # Formatting, severity logic
-│   ├── memory.py           # Review history, author profiles, learning
-│   └── heartbeat.py        # Stale PR detection daemon
+│   ├── memory.py           # Review history & learning layer
+│   ├── utils.py            # Markdown formatting, severity badges
+│   └── heartbeat.py        # Background daemon for stale PR detection
 │
-├── agent/                  # OpenClaw agent configuration
-│   ├── soul.md             # Agent persona and behavior rules
-│   ├── skill.md            # Skill registry (15 skills across 6 layers)
+├── agent/
+│   ├── soul.md             # Agent persona & review philosophy
+│   ├── skill.md            # Skill registry (6-layer architecture)
 │   ├── review_style.md     # Team coding conventions
-│   └── heartbeat.md        # Heartbeat daemon configuration
+│   └── heartbeat.md        # Heartbeat configuration
 │
-└── memory/                 # Persistent memory
-    └── history.json        # Review history, author profiles, false positives
+└── memory/
+    └── history.json        # Persistent review history
 ```
 
 ---
 
-## 🧠 How It Works
+## ⚙️ Setup
 
-### 1. Webhook Trigger
-GitHub sends a webhook event when a PR is opened or updated. CodeGuardian verifies the HMAC-SHA256 signature and extracts the PR metadata.
+### Prerequisites
 
-### 2. Context Retrieval
-The agent fetches the unified diff and file change metadata via the GitHub API, providing full context for analysis.
+- Python 3.10+
+- A [Groq API key](https://console.groq.com) (free)
+- A GitHub account
 
-### 3. Multi-Agent Analysis
-Four specialist agents run **in parallel** using `asyncio.gather()`:
+### 1. Clone & enter the project
 
-| Agent | Focus Areas |
-|-------|------------|
-| 🔒 **Security** | Injection, hardcoded secrets, auth flaws, SSRF, crypto issues |
-| ⚡ **Performance** | N+1 queries, blocking calls, memory leaks, inefficient algorithms |
-| 🧪 **Test Coverage** | Missing tests, untested edge cases, coverage gaps |
-| 🏗️ **Architecture** | SOLID violations, layer boundaries, duplication, naming |
+```bash
+cd prism_hackathon
+```
 
-### 4. Triage & Scoring
-Issues are deduplicated, classified by severity, and a **Regression Risk Score (1–10)** is calculated based on:
-- Number/severity of issues found
-- Size of the diff (lines changed)
-- Number of files affected
-- Presence of test changes
+### 2. Create and activate virtual environment
 
-### 5. GitHub Review
-A structured review is posted to the PR with:
-- Risk score badge
-- Summary table (blockers/warnings/suggestions)
-- Each issue with Why / Evidence / Suggested Fix / Confidence
-- Automatic action: `REQUEST_CHANGES` for blockers, `COMMENT` otherwise, `APPROVE` if clean
+```bash
+python -m venv myenv
 
-### 6. Memory & Learning
-Every review is persisted. The agent builds author profiles, tracks common issues, and auto-suppresses patterns flagged as false positives 3+ times.
+# Windows
+myenv\Scripts\activate
+
+# macOS/Linux
+source myenv/bin/activate
+```
+
+### 3. Install dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+### 4. Configure environment variables
+
+Edit the `.env` file:
+
+```env
+# LLM Provider (groq is free and default)
+LLM_PROVIDER=groq
+GROQ_API_KEY=your_groq_api_key_here
+GROQ_MODEL=llama3-70b-8192
+
+# GitHub (required only for live webhook mode)
+GITHUB_TOKEN=your_github_personal_access_token
+GITHUB_WEBHOOK_SECRET=your_webhook_secret_string
+
+# Server
+HOST=0.0.0.0
+PORT=8000
+```
+
+**Get a Groq API key**: [console.groq.com](https://console.groq.com) → Create API Key → Free tier
+
+**Get a GitHub token**: GitHub → Settings → Developer settings → Personal access tokens → Generate (enable `repo` scope)
+
+---
+
+## 🚀 Usage
+
+### Start the server
+
+```bash
+python run.py
+```
+
+Output:
+```
+============================================================
+  [*] CodeGuardian - PR Review Agent
+============================================================
+  Server:    http://0.0.0.0:8000
+  Webhook:   http://0.0.0.0:8000/webhook
+  Health:    http://0.0.0.0:8000/health
+  Dashboard: http://0.0.0.0:8000/dashboard
+  LLM:       groq
+============================================================
+```
+
+### Mode 1 — Test locally (no GitHub needed)
+
+Run the built-in test script to send a sample diff directly:
+
+```bash
+python test_review.py
+```
+
+Or `POST` any diff to the test endpoint:
+
+```bash
+curl -X POST http://localhost:8000/test-review \
+  -H "Content-Type: application/json" \
+  -d '{"diff": "--- a/app.py\n+++ b/app.py\n+password = \"admin123\"", "repo": "my/repo", "pr_number": 1}'
+```
+
+### Mode 2 — Live GitHub webhook
+
+**Step 1**: Expose your local server to the internet using ngrok:
+
+```bash
+ngrok http 8000
+```
+
+Copy the `https://xxxx.ngrok.io` URL.
+
+**Step 2**: Register a webhook on your GitHub repository:
+
+1. Go to **Your Repo → Settings → Webhooks → Add webhook**
+2. Set **Payload URL** to `https://xxxx.ngrok.io/webhook`
+3. Set **Content type** to `application/json`
+4. Set **Secret** to the same value as `GITHUB_WEBHOOK_SECRET` in `.env`
+5. Under **events**, select **"Let me select individual events"** → check **Pull requests**
+6. Click **Add webhook**
+
+**Step 3**: Open a PR on that repo — CodeGuardian will automatically review it!
+
+---
+
+## 🌐 Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/` | GET | API info |
+| `/health` | GET | Health check |
+| `/dashboard` | GET | Visual review dashboard |
+| `/webhook` | POST | GitHub webhook receiver |
+| `/test-review` | POST | Submit diff directly for review (demo mode) |
+| `/api/stats` | GET | Review statistics (JSON) |
+| `/docs` | GET | FastAPI auto-generated API docs |
 
 ---
 
 ## 📊 Review Output Example
 
-```markdown
-# 🛡️ CodeGuardian — Automated PR Review
+When a PR is reviewed, CodeGuardian posts a comment like:
 
-> 🟡 **Regression Risk Score: 5/10** — MEDIUM RISK
-> - 1 blocker-level issue found
-> - Medium diff (250 lines)
-> - No test files modified — changes are untested
+```
+🛡️ CodeGuardian — Automated PR Review
+🔴 Regression Risk Score: 8/10 — HIGH RISK
 
-## 📊 Summary
-| Metric | Count |
-|--------|-------|
-| 🔴 Blockers | 1 |
-| 🟡 Warnings | 2 |
-| 🔵 Suggestions | 1 |
-| ⏱️ Review Time | 3200ms |
+Summary
+| Metric     | Count |
+| Blockers   |   2   |
+| Warnings   |   3   |
+| Suggestions|   1   |
 
-## 🔴 BLOCKER (1)
-### 1. Hardcoded Database Password — `config.py`:12
-**Why:** Hardcoded credentials in source code will be exposed in version control
-**Suggested Fix:** Use `os.getenv("DB_PASSWORD")` with a `.env` file
+🚨 BLOCKERS
+1. [Security] Hardcoded API Secret
+   File: config.py | Line: 14
+   SECRET_KEY = "sk-12345" is hardcoded. Move to environment variables.
+
+2. [Security] SQL Injection Risk
+   File: db.py | Line: 32
+   f"SELECT * FROM users WHERE id={user_id}" — use parameterized queries.
 ```
 
 ---
 
-## 🛠️ Configuration
+## 🧩 Technology Stack
 
-### LLM Provider
-
-Set `LLM_PROVIDER` in `.env`:
-
-| Provider | Value | Model Setting |
-|----------|-------|---------------|
-| OpenAI | `openai` | `OPENAI_MODEL=gpt-4o-mini` |
-| Anthropic | `anthropic` | `ANTHROPIC_MODEL=claude-sonnet-4-20250514` |
-
-### Team Conventions
-
-Edit `agent/review_style.md` to add your team's coding standards. These are injected into every agent's context.
-
-### Agent Persona
-
-Edit `agent/soul.md` to customize the agent's behavior, tone, and severity rules.
+| Layer | Technology |
+|-------|-----------|
+| Web Framework | FastAPI + Uvicorn |
+| AI / LLM | Groq (Llama 3 70B) — free |
+| Multi-Agent | Python asyncio (parallel execution) |
+| GitHub Integration | GitHub REST API v3 |
+| Data Models | Pydantic v2 |
+| Persistence | JSON (memory/history.json) |
+| Dashboard | FastAPI HTMLResponse (glassmorphism UI) |
 
 ---
 
-## 📈 Measurable Impact
+## 👥 Team
 
-| Metric | Without Agent | With CodeGuardian | Improvement |
-|--------|---------------|-------------------|-------------|
-| Time to first review | 2–24 hours | < 3 minutes | 480× faster |
-| Review consistency | Varies by reviewer | 100% consistent | Eliminates variance |
-| Security coverage | Ad hoc | Every PR, every time | Full coverage |
-| Senior dev time freed | — | ~60% reduction | 12+ hours/week |
+**PRISM** — OpenClaw Hackathon 2026
+Theme 3: Productivity Platforms
 
 ---
 
-## 📄 License
-
-Built for the PRISM OpenClaw Hackathon 2026 — Theme 3: Productivity Platforms
-
----
-
-*🛡️ CodeGuardian — The first code reviewer that remembers what your team cares about.*
+*Built with ❤️ for OpenClaw Hackathon*
