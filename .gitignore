@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environment
+venv/
+.venv/
+env/
+myenv/
+
+# Environment variables
+.env
+.env.*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ChromaDB data
+chroma_data/
+
+# Logs
+*.log
+
+# Databases / temp
+*.sqlite3
+*.db
+
+# ngrok
+.ngrok2/

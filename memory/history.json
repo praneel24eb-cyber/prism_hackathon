@@ -1,0 +1,27 @@
+{
+  "reviews": [
+    {
+      "pr_number": 42,
+      "repo": "test/demo-repo",
+      "author": "tester",
+      "timestamp": "2026-05-07T16:18:48.268106+00:00",
+      "total_issues": 0,
+      "blockers": 0,
+      "warnings": 0,
+      "suggestions": 0,
+      "risk_score": 2,
+      "issues_summary": [],
+      "was_merged": null,
+      "false_positives": []
+    }
+  ],
+  "author_profiles": {
+    "tester": {
+      "total_prs": 1,
+      "total_blockers": 0,
+      "total_warnings": 0,
+      "common_issues": []
+    }
+  },
+  "false_positives": []
+}
