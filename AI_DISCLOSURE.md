@@ -2,7 +2,7 @@
 
 **Project**: ClawSight — Autonomous PR Review Agent
 **Hackathon**: OpenClaw Hackathon 2026 | Theme 3: Productivity Platforms
-**Team**: PRISM
+**Team**: ClawForge
 
 ---
 
@@ -14,20 +14,13 @@ This document transparently discloses all AI tools and models used during the de
 
 ## AI Tools Used
 
-### 1. Google Deepmind — Antigravity (Agentic Coding Assistant)
-**Role**: Primary development assistant
-**Used for**:
-- Architecting the 6-layer multi-agent system design
-- Writing and reviewing all Python source files (`agent.py`, `app.py`, `github.py`, `models.py`, `memory.py`, `utils.py`, `heartbeat.py`)
-- Debugging import errors, Windows encoding issues, and JSON parse edge cases
-- Writing the `README.md`, `.gitignore`, and this disclosure file
-- Suggesting the Groq integration as a free alternative to OpenAI
 
-**Extent**: Significant — used throughout the entire development cycle as a pair-programming assistant
+
+
 
 ---
 
-### 2. Groq API — Llama 3 70B (`llama3-70b-8192`)
+### 1. Groq API — Llama 3 70B (`llama3-70b-8192`)
 **Role**: Runtime LLM powering the 4 specialist review agents
 **Used for**:
 - Security Agent: Detecting injection risks, hardcoded secrets, auth flaws
@@ -42,7 +35,7 @@ This document transparently discloses all AI tools and models used during the de
 
 ---
 
-### 3. ChatGPT (OpenAI)
+### 2. ChatGPT (OpenAI)
 **Role**: Initial scaffolding / boilerplate generation
 **Used for**:
 - Generating initial placeholder code for `server/app.py`, `server/github.py`, and `server/agent.py` before refinement
@@ -70,7 +63,6 @@ The following elements represent original human decisions and contributions by t
 
 | AI Tool | Purpose | Extent |
 |---------|---------|--------|
-| Antigravity (Google Deepmind) | Agentic coding assistant for development | High — pair programming throughout |
 | Groq / Llama 3 70B | Runtime LLM for review agents | Core — powers all review intelligence |
 | ChatGPT (OpenAI) | Early scaffolding & brainstorming | Low — replaced/rewritten during dev |
 
@@ -82,4 +74,4 @@ All AI assistance was used as a productivity tool to accelerate development. The
 
 ---
 
-*Disclosed honestly by Team PRISM | OpenClaw Hackathon 2026*
+*Disclosed honestly by Team ClawForge | OpenClaw Hackathon 2026*
