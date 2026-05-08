@@ -1,5 +1,5 @@
 """
-Pydantic models for CodeGuardian.
+Pydantic models for ClawSight.
 
 Defines structured data types for review issues, agent results,
 risk scores, and the complete review report.

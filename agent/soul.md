@@ -1,6 +1,6 @@
-# CodeGuardian — Agent Soul
+# ClawSight — Agent Soul
 
-agent_name: CodeGuardian
+agent_name: ClawSight
 version: "1.0"
 
 # Core Identity

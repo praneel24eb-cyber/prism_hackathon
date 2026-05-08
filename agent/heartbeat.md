@@ -1,4 +1,4 @@
-# CodeGuardian — Heartbeat Configuration
+# ClawSight — Heartbeat Configuration
 
 # How often the daemon checks for stale PRs
 interval: 24h
@@ -8,7 +8,7 @@ stale_threshold: 24h
 
 # Tasks executed on each heartbeat cycle
 tasks:
-  - Check all configured repos for open PRs without CodeGuardian review
+  - Check all configured repos for open PRs without ClawSight review
   - Flag PRs older than stale_threshold as needing attention
   - Re-trigger analysis on stale PRs if auto_retrigger is enabled
   - Log stale PR warnings with PR number, author, and age

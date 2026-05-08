@@ -1,5 +1,5 @@
 """
-CodeGuardian — Multi-Agent Code Review Engine
+ClawSight — Multi-Agent Code Review Engine
 Supports Groq (FREE - default), OpenAI, and Anthropic
 """
 

@@ -1,4 +1,4 @@
-# CodeGuardian — Skill Registry
+# ClawSight — Skill Registry
 
 skills:
 

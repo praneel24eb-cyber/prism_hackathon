@@ -1,5 +1,5 @@
 """
-GitHub API integration for CodeGuardian.
+GitHub API integration for ClawSight.
 
 Handles:
 - Fetching PR diffs and file contents

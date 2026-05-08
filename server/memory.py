@@ -1,5 +1,5 @@
 """
-Memory & Learning layer for CodeGuardian — SQLite backend.
+Memory & Learning layer for ClawSight — SQLite backend.
 
 Tables:
   reviews          — one row per completed PR review

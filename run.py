@@ -1,5 +1,5 @@
 """
-CodeGuardian — Autonomous PR Review Agent
+ClawSight — Autonomous PR Review Agent
 Entry point for the server.
 
 Usage:
@@ -21,7 +21,7 @@ def main():
     port = int(os.getenv("PORT", "8000"))
 
     print("=" * 60)
-    print("  [*] CodeGuardian - PR Review Agent")
+    print("  [*] ClawSight - PR Review Agent")
     print("=" * 60)
     print(f"  Server:    http://{host}:{port}")
     print(f"  Webhook:   http://{host}:{port}/webhook")

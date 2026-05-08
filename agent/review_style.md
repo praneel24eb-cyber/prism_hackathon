@@ -1,4 +1,4 @@
-# CodeGuardian — Team Review Conventions
+# ClawSight — Team Review Conventions
 
 ## Security
 - Never commit hardcoded secrets, API keys, or tokens

@@ -1,4 +1,4 @@
-# 🛡️ CodeGuardian — Autonomous PR Review Agent
+# 🐾 ClawSight — Autonomous PR Review Agent
 
 > **OpenClaw Hackathon 2026 | Theme 3: Productivity Platforms**
 > *"What tools can you create to make AI your best colleague?"*
@@ -38,9 +38,9 @@ Modern engineering teams face a critical bottleneck in code review:
 
 ## 💡 Solution
 
-**CodeGuardian** is an autonomous AI-powered PR review agent — an always-on senior engineer that never misses a PR, never has a bad day, and gets smarter over time.
+**ClawSight** is an autonomous AI-powered PR review agent — an always-on senior engineer that never misses a PR, never has a bad day, and gets smarter over time.
 
-It connects to your GitHub repository via webhook. Every time a PR is opened or updated, CodeGuardian:
+It connects to your GitHub repository via webhook. Every time a PR is opened or updated, ClawSight:
 
 1. **Fetches the diff** from GitHub using the REST API
 2. **Runs 4 specialist AI agents in parallel** via `asyncio.gather()`:
@@ -198,7 +198,7 @@ python run.py
 
 ```
 ============================================================
-  [*] CodeGuardian - PR Review Agent
+  [*] ClawSight — PR Review Agent
 ============================================================
   Server:    http://0.0.0.0:8000
   Webhook:   http://0.0.0.0:8000/webhook
@@ -219,7 +219,7 @@ cp .env.example .env
 docker-compose up --build
 ```
 
-That's it. CodeGuardian is running at `http://localhost:8000`.
+That's it. ClawSight is running at `http://localhost:8000`.
 
 ---
 
@@ -294,7 +294,7 @@ Copy the `https://xxxx.ngrok.io` URL.
 5. **Events**: select **"Pull requests"** only
 6. Click **Add webhook**
 
-**Step 3 — Open a PR** — CodeGuardian will instantly post a structured review.
+**Step 3 — Open a PR** — ClawSight will instantly post a structured review.
 
 ---
 
@@ -307,8 +307,8 @@ Deploy in one click on Railway:
 Or push the Docker image to any cloud that accepts containers (Render, Fly.io, AWS ECS, GCP Cloud Run):
 
 ```bash
-docker build -t codeguardian .
-docker run -p 8000:8000 --env-file .env codeguardian
+docker build -t clawsight .
+docker run -p 8000:8000 --env-file .env clawsight
 ```
 
 Then register your production URL as the GitHub webhook endpoint instead of ngrok.
@@ -330,10 +330,10 @@ Then register your production URL as the GitHub webhook endpoint instead of ngro
 
 ## 📊 Sample Review Output
 
-When CodeGuardian reviews a PR, it posts a comment like this:
+When ClawSight reviews a PR, it posts a comment like this:
 
 ```markdown
-# 🛡️ CodeGuardian — Automated PR Review
+# 🐾 ClawSight — Automated PR Review
 
 > 🔴 Regression Risk Score: 8/10 — HIGH RISK
 > - 2 blockers found
@@ -381,7 +381,7 @@ SECRET_KEY = "sk-proj-abc123xyz"
 
 ## 📱 APK / SDK
 
-**An Android APK is not applicable** — CodeGuardian is a server-side webhook agent, not a mobile app.
+**An Android APK is not applicable** — ClawSight is a server-side webhook agent, not a mobile app.
 
 However, it ships with two integration paths:
 
@@ -401,7 +401,7 @@ A lightweight wrapper is available for programmatic use:
 ```python
 import httpx
 
-class CodeGuardianClient:
+class ClawSightClient:
     def __init__(self, base_url: str):
         self.base_url = base_url
 
@@ -415,13 +415,13 @@ class CodeGuardianClient:
         return resp.json()
 
 # Usage
-client = CodeGuardianClient("http://localhost:8000")
+client = ClawSightClient("http://localhost:8000")
 result = client.review(open("my.patch").read())
 print(f"Risk: {result['risk_score']}/10, Issues: {result['issues']}")
 ```
 
 ### 3. GitHub App (production distribution)
-For enterprise use, CodeGuardian can be packaged as a GitHub App and installed org-wide — no per-repo webhook setup needed.
+For enterprise use, ClawSight can be packaged as a GitHub App and installed org-wide — no per-repo webhook setup needed.
 
 ---
 
@@ -455,4 +455,4 @@ Covers:
 
 ---
 
-*🛡️ CodeGuardian v1.0 — Built for OpenClaw Hackathon 2026*
+*🐾 ClawSight v1.0 — Built for OpenClaw Hackathon 2026*

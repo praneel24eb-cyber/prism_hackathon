@@ -1,4 +1,4 @@
-"""Quick test script for CodeGuardian."""
+"""Quick test script for ClawSight."""
 import sys
 import io
 import httpx

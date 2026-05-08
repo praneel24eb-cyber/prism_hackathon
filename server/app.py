@@ -1,5 +1,5 @@
 """
-CodeGuardian — FastAPI Application
+ClawSight — FastAPI Application
 
 Main server that:
 1. Receives GitHub webhook events (PR opened/updated)
@@ -41,7 +41,7 @@ logging.basicConfig(
     format="%(asctime)s | %(name)-28s | %(levelname)-7s | %(message)s",
     datefmt="%H:%M:%S",
 )
-logger = logging.getLogger("codeguardian.app")
+logger = logging.getLogger("clawsight.app")
 
 
 # ---------------------------------------------------------------------------
@@ -52,14 +52,14 @@ logger = logging.getLogger("codeguardian.app")
 async def lifespan(app: FastAPI):
     """Manage startup and shutdown events."""
     await init_db()
-    logger.info("🛡️  CodeGuardian starting up...")
+    logger.info("🐾  ClawSight starting up...")
     logger.info(f"   LLM Provider: {os.getenv('LLM_PROVIDER', 'openai')}")
     logger.info(f"   Review Style: {len(load_review_style())} chars loaded")
 
     # Start heartbeat daemon in background (optional)
     # heartbeat_task = asyncio.create_task(heartbeat_loop([]))
     yield
-    logger.info("🛡️  CodeGuardian shutting down...")
+    logger.info("🐾  ClawSight shutting down...")
 
 
 # ---------------------------------------------------------------------------
@@ -67,7 +67,7 @@ async def lifespan(app: FastAPI):
 # ---------------------------------------------------------------------------
 
 app = FastAPI(
-    title="CodeGuardian",
+    title="ClawSight",
     description="Autonomous PR Review Agent — Context-Aware, Always-On, Learning",
     version="1.0.0",
     lifespan=lifespan,
@@ -91,7 +91,7 @@ async def health_check():
     """Health check endpoint for monitoring."""
     return {
         "status": "healthy",
-        "service": "CodeGuardian",
+        "service": "ClawSight",
         "version": "1.0.0",
         "llm_provider": os.getenv("LLM_PROVIDER", "openai"),
     }
@@ -231,7 +231,7 @@ async def api_stats():
 
 @app.get("/dashboard", response_class=HTMLResponse)
 async def dashboard():
-    """Serve the CodeGuardian dashboard."""
+    """Serve the ClawSight dashboard."""
     stats = await get_review_stats()
 
     # Build recent reviews rows
@@ -244,7 +244,7 @@ async def dashboard():
             <div class="empty-state">
               <div class="empty-icon">🚀</div>
               <div class="empty-title">No reviews yet</div>
-              <div class="empty-sub">Open a pull request to see CodeGuardian in action</div>
+              <div class="empty-sub">Open a pull request to see ClawSight in action</div>
             </div>
           </td>
         </tr>"""
@@ -279,7 +279,7 @@ async def dashboard():
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CodeGuardian — Dashboard</title>
+  <title>ClawSight — Dashboard</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after {{ margin: 0; padding: 0; box-sizing: border-box; }}
@@ -673,7 +673,7 @@ async def dashboard():
       <div class="header-left">
         <div class="logo-wrap">🛡️</div>
         <div class="header-text">
-          <h1>CodeGuardian</h1>
+          <h1>ClawSight</h1>
           <p>Autonomous AI PR Review Agent &nbsp;·&nbsp; 4 Parallel Specialists</p>
         </div>
       </div>
@@ -748,7 +748,7 @@ async def dashboard():
 
     <!-- Footer -->
     <div class="footer" style="margin-top:2.5rem">
-      🛡️ CodeGuardian v1.0
+      🐾 ClawSight v1.0
       <div class="footer-dot"></div>
       OpenClaw Hackathon 2026
       <div class="footer-dot"></div>

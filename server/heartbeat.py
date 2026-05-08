@@ -1,5 +1,5 @@
 """
-Heartbeat daemon for CodeGuardian.
+Heartbeat daemon for ClawSight.
 
 Periodically checks for stale PRs (open > 24h without a review)
 and re-triggers analysis. Runs as a background asyncio task.

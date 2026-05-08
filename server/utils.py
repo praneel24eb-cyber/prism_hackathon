@@ -1,5 +1,5 @@
 """
-Utility functions for CodeGuardian.
+Utility functions for ClawSight.
 
 - format_review_comment() — Format ReviewReport as GitHub-ready markdown
 - deduplicate_issues() — Merge identical issues from multiple agents
@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 from server.models import ReviewReport, ReviewIssue, Severity, RiskScore
 
-logger = logging.getLogger("codeguardian.utils")
+logger = logging.getLogger("clawsight.utils")
 
 
 # ---------------------------------------------------------------------------
@@ -49,7 +49,7 @@ def format_review_comment(report: ReviewReport) -> str:
     lines: list[str] = []
 
     # Header
-    lines.append("# 🛡️ CodeGuardian — Automated PR Review")
+    lines.append("# 🐾 ClawSight — Automated PR Review")
     lines.append("")
 
     # Risk score badge
@@ -155,7 +155,7 @@ def _footer(report: ReviewReport) -> str:
         "</details>",
         "",
         "---",
-        f"*🛡️ CodeGuardian v1.0 — Reviewed in {report.review_time_ms}ms using 4 parallel agents*",
+        f"*🐾 ClawSight v1.0 — Reviewed in {report.review_time_ms}ms using 4 parallel agents*",
         f"*Built on OpenClaw | Theme 3: Productivity Platforms*",
     ])
     return "\n".join(footer_lines)
