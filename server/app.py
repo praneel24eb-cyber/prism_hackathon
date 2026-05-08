@@ -12,14 +12,14 @@ Main server that:
 
 from __future__ import annotations
 
-import asyncio
+import html as html_module
 import logging
 import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse
 
 from server.agent import analyze_pr
 from server.github import (
@@ -28,7 +28,7 @@ from server.github import (
     post_review,
     verify_webhook_signature,
 )
-from server.memory import save_review, get_review_stats, load_review_style
+from server.memory import save_review, get_review_stats, load_review_style, init_db
 from server.models import PRPayload
 from server.utils import format_review_comment, determine_review_event
 
@@ -51,6 +51,7 @@ logger = logging.getLogger("codeguardian.app")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Manage startup and shutdown events."""
+    await init_db()
     logger.info("🛡️  CodeGuardian starting up...")
     logger.info(f"   LLM Provider: {os.getenv('LLM_PROVIDER', 'openai')}")
     logger.info(f"   Review Style: {len(load_review_style())} chars loaded")
@@ -161,13 +162,13 @@ async def github_webhook(request: Request):
     )
 
     # Step 3: Fetch diff
-    diff = fetch_pr_diff(pr_payload.diff_url)
+    diff = await fetch_pr_diff(pr_payload.diff_url)
     if not diff:
         logger.error("Failed to fetch PR diff — aborting review")
         return {"msg": "Failed to fetch diff", "error": True}
 
     # Fetch file metadata for extra context
-    pr_files = fetch_pr_files(pr_payload.repo_full_name, pr_payload.pr_number)
+    pr_files = await fetch_pr_files(pr_payload.repo_full_name, pr_payload.pr_number)
     files_info = "\n".join(
         f"- {f.get('filename', '?')} ({f.get('status', '?')}, +{f.get('additions', 0)}/-{f.get('deletions', 0)})"
         for f in pr_files[:30]
@@ -188,7 +189,7 @@ async def github_webhook(request: Request):
     event = determine_review_event(report)
 
     # Step 6: Post to GitHub
-    post_review(
+    await post_review(
         repo=pr_payload.repo_full_name,
         pr_number=pr_payload.pr_number,
         body=review_body,
@@ -196,7 +197,7 @@ async def github_webhook(request: Request):
     )
 
     # Step 7: Save to memory
-    save_review(report)
+    await save_review(report)
 
     logger.info(
         f"✅ Review complete: {report.total_blockers}B/{report.total_warnings}W/"
@@ -221,7 +222,7 @@ async def github_webhook(request: Request):
 @app.get("/api/stats")
 async def api_stats():
     """Get review statistics for the dashboard."""
-    return get_review_stats()
+    return await get_review_stats()
 
 
 # ---------------------------------------------------------------------------
@@ -231,7 +232,7 @@ async def api_stats():
 @app.get("/dashboard", response_class=HTMLResponse)
 async def dashboard():
     """Serve a simple dashboard showing review history and stats."""
-    stats = get_review_stats()
+    stats = await get_review_stats()
 
     html = f"""<!DOCTYPE html>
 <html lang="en">
@@ -369,12 +370,17 @@ async def dashboard():
                 badge_class = "badge-risk-low"
                 badge_text = f"Risk {risk}/10"
 
+            safe_repo = html_module.escape(str(r.get('repo', 'unknown')))
+            safe_pr = html_module.escape(str(r.get('pr_number', '?')))
+            safe_author = html_module.escape(str(r.get('author', '?')))
+            safe_badge_class = html_module.escape(badge_class)
+            safe_badge_text = html_module.escape(badge_text)
             html += f"""
             <li class="review-item">
                 <div>
-                    <span class="review-repo">{r.get('repo', 'unknown')}</span>
-                    <span> #{r.get('pr_number', '?')}</span>
-                    <span class="review-meta"> by @{r.get('author', '?')}</span>
+                    <span class="review-repo">{safe_repo}</span>
+                    <span> #{safe_pr}</span>
+                    <span class="review-meta"> by @{safe_author}</span>
                 </div>
                 <div>
                     <span class="review-meta">
@@ -382,7 +388,7 @@ async def dashboard():
                         🟡 {r.get('warnings', 0)} &nbsp;
                         🔵 {r.get('suggestions', 0)} &nbsp;
                     </span>
-                    <span class="badge {badge_class}">{badge_text}</span>
+                    <span class="badge {safe_badge_class}">{safe_badge_text}</span>
                 </div>
             </li>
 """
@@ -419,6 +425,10 @@ async def test_review(request: Request):
     if not diff:
         raise HTTPException(status_code=400, detail="Missing 'diff' in request body")
 
+    MAX_DIFF_BYTES = 500_000  # 500 KB hard cap
+    if len(diff.encode()) > MAX_DIFF_BYTES:
+        raise HTTPException(status_code=413, detail="Diff too large (max 500 KB)")
+
     report = await analyze_pr(
         diff=diff,
         pr_number=pr_number,
@@ -427,7 +437,7 @@ async def test_review(request: Request):
         pr_author="tester",
     )
 
-    save_review(report)
+    await save_review(report)
 
     return {
         "review": format_review_comment(report),

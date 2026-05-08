@@ -59,7 +59,7 @@ async def _check_stale_prs(repos: list[str]):
 
     for repo in repos:
         logger.info(f"Heartbeat: Checking {repo} for stale PRs...")
-        open_prs = fetch_open_prs(repo)
+        open_prs = await fetch_open_prs(repo)
 
         for pr in open_prs:
             created_at = pr.get("created_at", "")

@@ -1,6 +1,10 @@
 """Quick test script for CodeGuardian."""
+import sys
+import io
 import httpx
-import json
+
+# Force UTF-8 output so emojis print on Windows
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
 
 SAMPLE_DIFF = """--- a/app.py
 +++ b/app.py
@@ -29,21 +33,34 @@ SAMPLE_DIFF = """--- a/app.py
 +    return render_template("admin.html", data=get_all_data())
 """
 
-response = httpx.post(
-    "http://localhost:8000/test-review",
-    json={
-        "diff": SAMPLE_DIFF,
-        "repo": "test/demo-repo",
-        "pr_number": 42,
-    },
-    timeout=120.0,
-)
+print(f"Python: {sys.version}")
+print("Sending test diff to http://localhost:8000/test-review ...")
+print()
+
+try:
+    response = httpx.post(
+        "http://localhost:8000/test-review",
+        json={
+            "diff": SAMPLE_DIFF,
+            "repo": "test/demo-repo",
+            "pr_number": 42,
+        },
+        timeout=120.0,
+    )
+except httpx.ConnectError:
+    print("ERROR: Could not connect to http://localhost:8000")
+    print("Make sure the server is running in another terminal: python run.py")
+    sys.exit(1)
+
+print(f"Status: {response.status_code}")
+
+if response.status_code != 200:
+    print(f"ERROR response body:\n{response.text}")
+    sys.exit(1)
 
 data = response.json()
-print("=" * 60)
-print(f"Status: {response.status_code}")
 print(f"Issues Found: {data.get('issues', 0)}")
-print(f"Risk Score: {data.get('risk_score', 0)}/10")
+print(f"Risk Score:   {data.get('risk_score', 0)}/10")
 print("=" * 60)
 print()
 print(data.get("review", "No review generated"))

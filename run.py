@@ -30,11 +30,12 @@ def main():
     print(f"  LLM:       {os.getenv('LLM_PROVIDER', 'openai')}")
     print("=" * 60)
 
+    dev_mode = os.getenv("DEV_MODE", "false").lower() == "true"
     uvicorn.run(
         "server.app:app",
         host=host,
         port=port,
-        reload=True,
+        reload=dev_mode,
         log_level="info",
     )
 

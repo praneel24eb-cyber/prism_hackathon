@@ -1,45 +1,73 @@
+# ============================================================
 # Python
+# ============================================================
 __pycache__/
 **/__pycache__/
 *.py[cod]
-*$py.class
+*.pyo
+*.pyd
 *.so
+*.egg
 *.egg-info/
 dist/
 build/
-*.egg
+.eggs/
 
-# Virtual environment
+# ============================================================
+# Virtual environments
+# ============================================================
 venv/
 .venv/
 env/
+.env/
 myenv/
+ENV/
 
-# Environment variables
+# ============================================================
+# Environment variables — NEVER commit real keys
+# ============================================================
 .env
-.env.*
+.env.local
+.env.*.local
+.env.production
+.env.staging
+# .env.example is intentionally tracked (contains no real secrets)
 
-# IDE
+# ============================================================
+# Database & runtime data
+# ============================================================
+*.db
+*.sqlite3
+*.sqlite
+memory/codeguardian.db
+memory/history.json
+
+# ============================================================
+# Server log files (generated during local dev/test)
+# ============================================================
+server_out.txt
+server_err.txt
+*.log
+
+# ============================================================
+# IDE & OS
+# ============================================================
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
-
-# OS
 .DS_Store
 Thumbs.db
 desktop.ini
 
-# ChromaDB data
-chroma_data/
+# ============================================================
+# Docker
+# ============================================================
+.dockerignore
 
-# Logs
-*.log
-
-# Databases / temp
-*.sqlite3
-*.db
-
-# ngrok
+# ============================================================
+# Misc
+# ============================================================
 .ngrok2/
+chroma_data/

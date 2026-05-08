@@ -19,9 +19,10 @@ import httpx
 
 logger = logging.getLogger("codeguardian.github")
 
+_GITHUB_API = "https://api.github.com"
+
 
 def _get_token() -> str:
-    """Get GitHub token (lazy-loaded so dotenv is already initialized)."""
     token = os.getenv("GITHUB_TOKEN", "")
     if not token or token == "your_github_token_here":
         logger.warning("GITHUB_TOKEN is not set — GitHub API calls will fail")
@@ -29,7 +30,6 @@ def _get_token() -> str:
 
 
 def _headers(accept: str = "application/vnd.github.v3+json") -> dict:
-    """Standard GitHub API headers."""
     return {
         "Authorization": f"token {_get_token()}",
         "Accept": accept,
@@ -44,12 +44,12 @@ def _headers(accept: str = "application/vnd.github.v3+json") -> dict:
 def verify_webhook_signature(payload_body: bytes, signature: Optional[str]) -> bool:
     """
     Verify GitHub webhook signature using HMAC-SHA256.
-    Returns True if signature is valid, or if no secret is configured.
+    Returns False if secret is not configured (fail-closed).
     """
     secret = os.getenv("GITHUB_WEBHOOK_SECRET", "")
     if not secret or secret == "your_webhook_secret_here":
-        logger.warning("GITHUB_WEBHOOK_SECRET not set — skipping signature verification")
-        return True
+        logger.warning("GITHUB_WEBHOOK_SECRET not set — rejecting webhook")
+        return False
 
     if not signature:
         logger.error("No X-Hub-Signature-256 header present")
@@ -65,76 +65,101 @@ def verify_webhook_signature(payload_body: bytes, signature: Optional[str]) -> b
 
 
 # ---------------------------------------------------------------------------
-# Fetch PR data
+# Async fetch functions
 # ---------------------------------------------------------------------------
 
-def fetch_pr_diff(diff_url: str) -> str:
+async def fetch_pr_diff(diff_url: str) -> str:
     """Fetch the unified diff for a pull request."""
     try:
-        response = httpx.get(
-            diff_url,
-            headers=_headers("application/vnd.github.v3.diff"),
-            timeout=30.0,
-            follow_redirects=True,
-        )
-        response.raise_for_status()
-        return response.text
+        async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
+            response = await client.get(
+                diff_url,
+                headers=_headers("application/vnd.github.v3.diff"),
+            )
+            response.raise_for_status()
+            return response.text
     except httpx.HTTPError as e:
         logger.error(f"Failed to fetch PR diff: {e}")
         return ""
 
 
-def fetch_pr_files(repo: str, pr_number: int) -> list[dict]:
-    """Fetch list of changed files in a PR with patch data."""
-    url = f"https://api.github.com/repos/{repo}/pulls/{pr_number}/files"
-    try:
-        response = httpx.get(url, headers=_headers(), timeout=30.0)
-        response.raise_for_status()
-        return response.json()
-    except httpx.HTTPError as e:
-        logger.error(f"Failed to fetch PR files: {e}")
-        return []
+async def fetch_pr_files(repo: str, pr_number: int) -> list[dict]:
+    """Fetch list of changed files in a PR (paginates up to 300 files)."""
+    results: list[dict] = []
+    page = 1
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        while True:
+            url = f"{_GITHUB_API}/repos/{repo}/pulls/{pr_number}/files?per_page=100&page={page}"
+            try:
+                response = await client.get(url, headers=_headers())
+                response.raise_for_status()
+                batch = response.json()
+                if not batch:
+                    break
+                results.extend(batch)
+                if len(batch) < 100:
+                    break
+                page += 1
+                if page > 3:  # cap at 300 files
+                    break
+            except httpx.HTTPError as e:
+                logger.error(f"Failed to fetch PR files (page {page}): {e}")
+                break
+    return results
 
 
-def fetch_file_content(repo: str, path: str, ref: str = "main") -> str:
+async def fetch_file_content(repo: str, path: str, ref: str = "main") -> str:
     """Fetch raw content of a file from a repository."""
-    url = f"https://api.github.com/repos/{repo}/contents/{path}?ref={ref}"
+    url = f"{_GITHUB_API}/repos/{repo}/contents/{path}?ref={ref}"
     try:
-        response = httpx.get(
-            url,
-            headers=_headers("application/vnd.github.v3.raw"),
-            timeout=30.0,
-        )
-        response.raise_for_status()
-        return response.text
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.get(
+                url,
+                headers=_headers("application/vnd.github.v3.raw"),
+            )
+            response.raise_for_status()
+            return response.text
     except httpx.HTTPError as e:
         logger.error(f"Failed to fetch file {path}: {e}")
         return ""
 
 
+async def fetch_open_prs(repo: str) -> list[dict]:
+    """Fetch all open PRs for a repository (used by heartbeat)."""
+    url = f"{_GITHUB_API}/repos/{repo}/pulls?state=open&per_page=100"
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.get(url, headers=_headers())
+            response.raise_for_status()
+            return response.json()
+    except httpx.HTTPError as e:
+        logger.error(f"Failed to fetch open PRs: {e}")
+        return []
+
+
 # ---------------------------------------------------------------------------
-# Post review
+# Async post functions
 # ---------------------------------------------------------------------------
 
-def post_comment(repo: str, pr_number: int, comment: str) -> bool:
+async def post_comment(repo: str, pr_number: int, comment: str) -> bool:
     """Post a general comment on a PR (issue comment)."""
-    url = f"https://api.github.com/repos/{repo}/issues/{pr_number}/comments"
+    url = f"{_GITHUB_API}/repos/{repo}/issues/{pr_number}/comments"
     try:
-        response = httpx.post(
-            url,
-            headers=_headers(),
-            json={"body": comment},
-            timeout=30.0,
-        )
-        response.raise_for_status()
-        logger.info(f"Posted comment on {repo}#{pr_number}")
-        return True
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(
+                url,
+                headers=_headers(),
+                json={"body": comment},
+            )
+            response.raise_for_status()
+            logger.info(f"Posted comment on {repo}#{pr_number}")
+            return True
     except httpx.HTTPError as e:
         logger.error(f"Failed to post comment: {e}")
         return False
 
 
-def post_review(
+async def post_review(
     repo: str,
     pr_number: int,
     body: str,
@@ -151,36 +176,17 @@ def post_review(
         event: "APPROVE", "REQUEST_CHANGES", or "COMMENT"
         comments: Optional list of inline review comments
     """
-    url = f"https://api.github.com/repos/{repo}/pulls/{pr_number}/reviews"
-    payload: dict = {
-        "body": body,
-        "event": event,
-    }
+    url = f"{_GITHUB_API}/repos/{repo}/pulls/{pr_number}/reviews"
+    payload: dict = {"body": body, "event": event}
     if comments:
         payload["comments"] = comments
 
     try:
-        response = httpx.post(
-            url,
-            headers=_headers(),
-            json=payload,
-            timeout=30.0,
-        )
-        response.raise_for_status()
-        logger.info(f"Posted review ({event}) on {repo}#{pr_number}")
-        return True
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(url, headers=_headers(), json=payload)
+            response.raise_for_status()
+            logger.info(f"Posted review ({event}) on {repo}#{pr_number}")
+            return True
     except httpx.HTTPError as e:
         logger.error(f"Failed to post review: {e}")
         return False
-
-
-def fetch_open_prs(repo: str) -> list[dict]:
-    """Fetch all open PRs for a repository (used by heartbeat)."""
-    url = f"https://api.github.com/repos/{repo}/pulls?state=open"
-    try:
-        response = httpx.get(url, headers=_headers(), timeout=30.0)
-        response.raise_for_status()
-        return response.json()
-    except httpx.HTTPError as e:
-        logger.error(f"Failed to fetch open PRs: {e}")
-        return []

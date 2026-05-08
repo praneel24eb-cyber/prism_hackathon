@@ -12,6 +12,7 @@ import os
 import time
 from pathlib import Path
 
+from server.memory import get_author_context, get_suppressed_patterns
 from server.models import (
     AgentResult,
     AgentType,
@@ -57,19 +58,57 @@ async def _call_llm(system_prompt: str, user_prompt: str) -> str:
 
 
 # ================================
+# SINGLETON LLM CLIENTS
+# ================================
+
+_groq_client = None
+_openai_client = None
+_anthropic_client = None
+
+LLM_TIMEOUT = 60.0  # seconds per agent call
+
+
+def _get_groq_client():
+    global _groq_client
+    if _groq_client is None:
+        from openai import AsyncOpenAI
+        _groq_client = AsyncOpenAI(
+            api_key=os.getenv("GROQ_API_KEY"),
+            base_url="https://api.groq.com/openai/v1",
+            timeout=LLM_TIMEOUT,
+        )
+    return _groq_client
+
+
+def _get_openai_client():
+    global _openai_client
+    if _openai_client is None:
+        from openai import AsyncOpenAI
+        _openai_client = AsyncOpenAI(
+            api_key=os.getenv("OPENAI_API_KEY"),
+            timeout=LLM_TIMEOUT,
+        )
+    return _openai_client
+
+
+def _get_anthropic_client():
+    global _anthropic_client
+    if _anthropic_client is None:
+        import anthropic
+        _anthropic_client = anthropic.AsyncAnthropic(
+            api_key=os.getenv("ANTHROPIC_API_KEY"),
+            timeout=LLM_TIMEOUT,
+        )
+    return _anthropic_client
+
+
+# ================================
 # GROQ (FREE - DEFAULT)
 # ================================
 
 async def _call_groq(system_prompt: str, user_prompt: str) -> str:
-    from openai import AsyncOpenAI
-
-    client = AsyncOpenAI(
-        api_key=os.getenv("GROQ_API_KEY"),
-        base_url="https://api.groq.com/openai/v1",
-    )
-
-    model = os.getenv("GROQ_MODEL", "llama3-70b-8192")
-
+    client = _get_groq_client()
+    model = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
     try:
         response = await client.chat.completions.create(
             model=model,
@@ -79,9 +118,7 @@ async def _call_groq(system_prompt: str, user_prompt: str) -> str:
             ],
             temperature=0.2,
         )
-
         return response.choices[0].message.content or ""
-
     except Exception as e:
         logger.error(f"Groq error: {e}")
         return json.dumps({"issues": [], "summary": f"Groq error: {e}"})
@@ -92,11 +129,8 @@ async def _call_groq(system_prompt: str, user_prompt: str) -> str:
 # ================================
 
 async def _call_openai(system_prompt: str, user_prompt: str) -> str:
-    from openai import AsyncOpenAI
-
-    client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+    client = _get_openai_client()
     model = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
-
     try:
         response = await client.chat.completions.create(
             model=model,
@@ -106,9 +140,7 @@ async def _call_openai(system_prompt: str, user_prompt: str) -> str:
             ],
             temperature=0.2,
         )
-
         return response.choices[0].message.content or ""
-
     except Exception as e:
         logger.error(f"OpenAI error: {e}")
         return json.dumps({"issues": [], "summary": f"OpenAI error: {e}"})
@@ -119,11 +151,8 @@ async def _call_openai(system_prompt: str, user_prompt: str) -> str:
 # ================================
 
 async def _call_anthropic(system_prompt: str, user_prompt: str) -> str:
-    import anthropic
-
-    client = anthropic.AsyncAnthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+    client = _get_anthropic_client()
     model = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-20250514")
-
     try:
         response = await client.messages.create(
             model=model,
@@ -131,9 +160,7 @@ async def _call_anthropic(system_prompt: str, user_prompt: str) -> str:
             system=system_prompt,
             messages=[{"role": "user", "content": user_prompt}],
         )
-
         return response.content[0].text
-
     except Exception as e:
         logger.error(f"Anthropic error: {e}")
         return json.dumps({"issues": [], "summary": f"Anthropic error: {e}"})
@@ -237,12 +264,13 @@ async def _run_single_agent(
     try:
         raw = await _call_llm(system_prompt, user_prompt)
 
-        # Clean markdown fences if present
+        # Strip markdown code fences (handles ```json, ```python, ``` etc.)
         raw = raw.strip()
         if raw.startswith("```"):
-            raw = raw.split("\n", 1)[1] if "\n" in raw else raw
-            if raw.endswith("```"):
-                raw = raw[:-3]
+            lines = raw.split("\n")
+            raw = "\n".join(lines[1:])   # drop opening fence line
+            if raw.rstrip().endswith("```"):
+                raw = raw.rstrip()[:-3]
             raw = raw.strip()
 
         data = json.loads(raw)
@@ -375,6 +403,14 @@ async def analyze_pr(
     start = time.monotonic()
     context = _load_agent_context()
 
+    # Inject author history for context-aware reviews
+    author_ctx = await get_author_context(pr_author) if pr_author else ""
+    if author_ctx:
+        context = f"{context}\n\n{author_ctx}"
+
+    # Load false positive patterns to skip known noise
+    suppressed = set(await get_suppressed_patterns())
+
     logger.info(f"Starting 4-agent parallel analysis of {repo}#{pr_number}...")
 
     # Run all 4 agents concurrently
@@ -384,7 +420,7 @@ async def analyze_pr(
     ]
     results: list[AgentResult] = await asyncio.gather(*tasks)
 
-    # Merge and deduplicate issues
+    # Merge, deduplicate, and suppress known false positives
     all_issues: list[ReviewIssue] = []
     for r in results:
         all_issues.extend(r.issues)
@@ -392,7 +428,11 @@ async def analyze_pr(
     seen = set()
     unique_issues: list[ReviewIssue] = []
     for issue in all_issues:
-        key = (issue.title.lower().strip(), issue.file, issue.severity)
+        title_lower = issue.title.lower().strip()
+        if title_lower in suppressed:
+            logger.debug(f"Suppressing false positive: {issue.title}")
+            continue
+        key = (title_lower, issue.file, issue.severity)
         if key not in seen:
             seen.add(key)
             unique_issues.append(issue)
