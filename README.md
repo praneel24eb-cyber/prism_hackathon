@@ -9,8 +9,8 @@
 
 ## 📹 Video Demo
 
-> **[Watch the Demo Video →](YOUR_VIDEO_LINK_HERE)**
->
+<video src="demo_video.mp4" controls width="100%"></video>
+
 > The demo walks through:
 > - Live PR opened on GitHub
 > - 4 agents running in parallel in real-time
