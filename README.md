@@ -9,7 +9,7 @@
 
 ## 📹 Video Demo
 
-<video src="demo_video.mp4" controls width="100%"></video>
+> **[▶ Watch the Demo Video on Google Drive](https://drive.google.com/file/d/17xsLPb_eLeZ00yz_do1hd88LFl7pR_oU/view?usp=sharing)**
 
 > The demo walks through:
 > - Live PR opened on GitHub
